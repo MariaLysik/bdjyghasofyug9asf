@@ -14,7 +14,7 @@ namespace bdjyghasofyug9asf
     {
         [FunctionName("HttpOrderFormSave")]
         public static IActionResult Run([HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = null)]HttpRequest req, 
-            [Table("Orders", Connection = "AzureWebJobsStorage")]ICollector<Order> ordersTable,
+            [Table("Orders", Connection = "TableStorage")]ICollector<Order> ordersTable,
             TraceWriter log)
         {
             Order order = null;
@@ -22,7 +22,7 @@ namespace bdjyghasofyug9asf
             {
                 string requestBody = new StreamReader(req.Body).ReadToEnd();
                 order = JsonConvert.DeserializeObject<Order>(requestBody);
-                order.PartitionKey = System.DateTime.UtcNow.DayOfYear.ToString();
+                order.PartitionKey = System.DateTime.UtcNow.Ticks.ToString();
                 order.RowKey = order.PhotoName;
                 ordersTable.Add(order);
             }
@@ -38,7 +38,7 @@ namespace bdjyghasofyug9asf
     {
         public string CustomerEmail { get; set; }
         public string PhotoName { get; set; }
-        public string PhotoHeight { get; set; }
-        public string PhotoWidth { get; set; }
+        public int PhotoHeight { get; set; }
+        public int PhotoWidth { get; set; }
     }
 }
