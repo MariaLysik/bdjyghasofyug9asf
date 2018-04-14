@@ -17,7 +17,7 @@ namespace FaceSender
             [Blob("resizedphotos", FileAccess.Read, Connection = "TableStorage")]CloudBlobContainer photosContainer,
             TraceWriter log)
         {
-            string fileName = req.Query["fileName"];
+            string fileName = req.Query["PhotoName"];
             if (string.IsNullOrWhiteSpace(fileName))
                 return new BadRequestResult();
 

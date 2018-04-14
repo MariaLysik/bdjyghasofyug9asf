@@ -7,11 +7,9 @@ using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Blob;
 using Newtonsoft.Json;
 using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.Processing;
 using SixLabors.ImageSharp.Formats.Jpeg;
 using System.IO;
 using System.Threading.Tasks;
-using SixLabors.ImageSharp.Processing.Transforms;
 
 namespace bdjyghasofyug9asf
 {
@@ -24,11 +22,11 @@ namespace bdjyghasofyug9asf
             TraceWriter log)
         {
             var pictureResizeRequest = GetResizeRequest(req);
-            var photoStream = await GetSourcePhotoStream(photosContainer, pictureResizeRequest.FileName);
+            var photoStream = await GetSourcePhotoStream(photosContainer, pictureResizeRequest.PhotoName);
             SetAttachmentAsContentDisposition(resizedPhotoCloudBlob, pictureResizeRequest);
 
             var image = Image.Load(photoStream);
-            image.Mutate(e => e.Resize(pictureResizeRequest.RequiredWidth, pictureResizeRequest.RequiredHeight));
+            image.Mutate(e => e.Resize(pictureResizeRequest.PhotoWidth, pictureResizeRequest.PhotoHeight));
 
             var resizedPhotoStream = new MemoryStream();
             image.Save(resizedPhotoStream, new JpegEncoder());
@@ -36,14 +34,14 @@ namespace bdjyghasofyug9asf
 
             await resizedPhotoCloudBlob.UploadFromStreamAsync(resizedPhotoStream);
 
-            return new JsonResult(new { FileName = resizedPhotoCloudBlob.Name });
+            return new JsonResult(new { PhotoName = resizedPhotoCloudBlob.Name });
         }
 
         private static void SetAttachmentAsContentDisposition(ICloudBlob resizedPhotoCloudBlob,
             PictureResizeRequest pictureResizeRequest)
         {
             resizedPhotoCloudBlob.Properties.ContentDisposition =
-                $"attachment; filename={pictureResizeRequest.RequiredWidth}x{pictureResizeRequest.RequiredHeight}.jpeg";
+                $"attachment; filename={pictureResizeRequest.PhotoWidth}x{pictureResizeRequest.PhotoHeight}.jpeg";
         }
 
         private static async Task<Stream> GetSourcePhotoStream(CloudBlobContainer photosContainer,
@@ -65,8 +63,8 @@ namespace bdjyghasofyug9asf
 
     public class PictureResizeRequest
     {
-        public string FileName { get; set; }
-        public int RequiredWidth { get; set; }
-        public int RequiredHeight { get; set; }
+        public string PhotoName { get; set; }
+        public int PhotoWidth { get; set; }
+        public int PhotoHeight { get; set; }
     }
 }
