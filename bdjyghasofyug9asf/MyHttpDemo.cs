@@ -30,9 +30,9 @@ namespace bdjyghasofyug9asf
 
     public class Order
     {
-        string Name { get; set; }
-        string EmailAddress { get; set; }
-        string PhotoSize { get; set; }
+        string CustomerEmail { get; set; }
         string PhotoName { get; set; }
+        string PhotoHeight { get; set; }
+        string PhotoWidth { get; set; }
     }
 }
