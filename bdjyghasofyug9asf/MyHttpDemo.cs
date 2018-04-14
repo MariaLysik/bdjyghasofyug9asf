@@ -6,19 +6,25 @@ using Microsoft.Azure.WebJobs.Extensions.Http;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Azure.WebJobs.Host;
 using Newtonsoft.Json;
+using Microsoft.WindowsAzure.Storage.Table;
 
 namespace bdjyghasofyug9asf
 {
     public static class MyHttpDemo
     {
         [FunctionName("HttpOrderFormSave")]
-        public static IActionResult Run([HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = null)]HttpRequest req, TraceWriter log)
+        public static IActionResult Run([HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = null)]HttpRequest req, 
+            [Table("Orders", Connection = "AzureWebJobsStorage")]ICollector<Order> ordersTable,
+            TraceWriter log)
         {
             Order order = null;
             try
             {
                 string requestBody = new StreamReader(req.Body).ReadToEnd();
                 order = JsonConvert.DeserializeObject<Order>(requestBody);
+                order.PartitionKey = System.DateTime.UtcNow.DayOfYear.ToString();
+                order.RowKey = order.PhotoName;
+                ordersTable.Add(order);
             }
             catch(System.Exception)
             {
@@ -28,11 +34,11 @@ namespace bdjyghasofyug9asf
         }
     }
 
-    public class Order
+    public class Order: TableEntity
     {
-        string CustomerEmail { get; set; }
-        string PhotoName { get; set; }
-        string PhotoHeight { get; set; }
-        string PhotoWidth { get; set; }
+        public string CustomerEmail { get; set; }
+        public string PhotoName { get; set; }
+        public string PhotoHeight { get; set; }
+        public string PhotoWidth { get; set; }
     }
 }
