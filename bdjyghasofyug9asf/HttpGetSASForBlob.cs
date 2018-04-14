@@ -8,7 +8,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Azure.WebJobs.Host;
 using Microsoft.WindowsAzure.Storage.Blob;
 
-namespace FaceSender
+namespace bdjyghasofyug9asf
 {
     public static class HttpGetSharedAccessSignatureForBlob
     {
