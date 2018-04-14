@@ -1,5 +1,3 @@
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Extensions.Http;
 using Microsoft.Azure.WebJobs.Host;
@@ -9,19 +7,43 @@ using Newtonsoft.Json;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Formats.Jpeg;
 using System.IO;
+using System.Net.Http;
 using System.Threading.Tasks;
 
 namespace FaceSender
 {
-    public static class HttpResizePicture
+    public static class HttpDurableResizePicture
     {
-        [FunctionName("HttpResizePicture")]
-        public static async Task<IActionResult> Run([HttpTrigger(AuthorizationLevel.Function, "post", Route = null)]HttpRequest req,
+        [FunctionName("HttpDurableResizePicture")]
+        public static async Task<string[]> RunOrchestrator(
+            [OrchestrationTrigger] DurableOrchestrationContext context)
+        {
+            var pictureResizeRequests = context.GetInput<PictureResizeRequest[]>();
+
+            var tasks = new Task<string>[pictureResizeRequests.Length];
+            for (int i = 0; i < pictureResizeRequests.Length; i++)
+            {
+                tasks[i] = context.CallActivityAsync<string>(
+                "HttpDurableResizePicture_ResizePicture",
+                pictureResizeRequests[i]);
+            }
+
+            await Task.WhenAll(tasks);
+
+            string[] resizedPicturesNames = new string[tasks.Length];
+            for (int i = 0; i < tasks.Length; i++)
+            {
+                resizedPicturesNames[i] = tasks[i].Result;
+            }
+            return resizedPicturesNames;
+        }
+
+        [FunctionName("HttpDurableResizePicture_ResizePicture")]
+        public static async Task<string> ResizePicture([ActivityTrigger] PictureResizeRequest pictureResizeRequest,
             [Blob("photos", FileAccess.Read, Connection = "TableStorage")]CloudBlobContainer photosContainer,
             [Blob("resizedphotos/{rand-guid}", FileAccess.ReadWrite, Connection = "TableStorage")]ICloudBlob resizedPhotoCloudBlob,
             TraceWriter log)
         {
-            var pictureResizeRequest = GetResizeRequest(req);
             var photoStream = await GetSourcePhotoStream(photosContainer, pictureResizeRequest.FileName);
             SetAttachmentAsContentDisposition(resizedPhotoCloudBlob, pictureResizeRequest);
 
@@ -34,7 +56,23 @@ namespace FaceSender
 
             await resizedPhotoCloudBlob.UploadFromStreamAsync(resizedPhotoStream);
 
-            return new JsonResult(new { PhotoName = resizedPhotoCloudBlob.Name });
+            return resizedPhotoCloudBlob.Name;
+        }
+
+
+        [FunctionName("HttpDurableResizePicture_HttpStart")]
+        public static async Task<HttpResponseMessage> HttpStart(
+            [HttpTrigger(AuthorizationLevel.Function, "get", "post")]HttpRequestMessage req,
+            [OrchestrationClient]DurableOrchestrationClient starter,
+            TraceWriter log)
+        {
+            var content = req.Content;
+            string jsonContent = await content.ReadAsStringAsync();
+            dynamic pictureResizeRequests = JsonConvert.DeserializeObject<PictureResizeRequest[]>(jsonContent);
+
+            string instanceId = await starter.StartNewAsync("HttpDurableResizePicture", pictureResizeRequests);
+
+            return starter.CreateCheckStatusResponse(req, instanceId);
         }
 
         private static void SetAttachmentAsContentDisposition(ICloudBlob resizedPhotoCloudBlob,
@@ -53,18 +91,5 @@ namespace FaceSender
             return photoStream;
         }
 
-        private static PictureResizeRequest GetResizeRequest(HttpRequest req)
-        {
-            string requestBody = new StreamReader(req.Body).ReadToEnd();
-            PictureResizeRequest pictureResizeRequest = JsonConvert.DeserializeObject<PictureResizeRequest>(requestBody);
-            return pictureResizeRequest;
-        }
-    }
-
-    public class PictureResizeRequest
-    {
-        public string FileName { get; set; }
-        public int RequiredWidth { get; set; }
-        public int RequiredHeight { get; set; }
     }
 }

@@ -8,7 +8,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Azure.WebJobs.Host;
 using Microsoft.WindowsAzure.Storage.Blob;
 
-namespace bdjyghasofyug9asf
+namespace FaceSender
 {
     public static class HttpGetSharedAccessSignatureForBlob
     {
@@ -17,7 +17,7 @@ namespace bdjyghasofyug9asf
             [Blob("resizedphotos", FileAccess.Read, Connection = "TableStorage")]CloudBlobContainer photosContainer,
             TraceWriter log)
         {
-            string fileName = req.Query["PhotoName"];
+            string fileName = req.Query["FileName"];
             if (string.IsNullOrWhiteSpace(fileName))
                 return new BadRequestResult();
 

@@ -8,37 +8,37 @@ using Microsoft.Azure.WebJobs.Host;
 using Newtonsoft.Json;
 using Microsoft.WindowsAzure.Storage.Table;
 
-namespace bdjyghasofyug9asf
+namespace FaceSender
 {
-    public static class MyHttpDemo
+    public static class HttpOrderFormSave
     {
         [FunctionName("HttpOrderFormSave")]
-        public static IActionResult Run([HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = null)]HttpRequest req, 
-            [Table("Orders", Connection = "TableStorage")]ICollector<Order> ordersTable,
-            TraceWriter log)
+        public static IActionResult Run([HttpTrigger(AuthorizationLevel.Function, "post", Route = null)]HttpRequest req,
+            [Table("Orders", Connection = "TableStorage")]ICollector<PhotoOrder> ordersTable, TraceWriter log)
         {
-            Order order = null;
             try
             {
                 string requestBody = new StreamReader(req.Body).ReadToEnd();
-                order = JsonConvert.DeserializeObject<Order>(requestBody);
-                order.PartitionKey = System.DateTime.UtcNow.Ticks.ToString();
-                order.RowKey = order.PhotoName;
-                ordersTable.Add(order);
+                PhotoOrder orderData = JsonConvert.DeserializeObject<PhotoOrder>(requestBody);
+                orderData.PartitionKey = System.DateTime.UtcNow.DayOfYear.ToString();
+                orderData.RowKey = orderData.FileName;
+                ordersTable.Add(orderData);
             }
-            catch(System.Exception)
+            catch (System.Exception ex)
             {
-                return new BadRequestObjectResult("Wprowadzone dane s¹ nieprawid³owe.");
+                log.Error("Something went wrong", ex);
+                return new BadRequestObjectResult("Something went wrong");
             }
-            return (ActionResult)new OkObjectResult($"Zamówienie przyjêto.");
+
+            return (ActionResult)new OkObjectResult($"Order processed");
         }
     }
 
-    public class Order: TableEntity
+    public class PhotoOrder : TableEntity
     {
         public string CustomerEmail { get; set; }
-        public string PhotoName { get; set; }
-        public int PhotoHeight { get; set; }
-        public int PhotoWidth { get; set; }
+        public string FileName { get; set; }
+        public string Resolutions { get; set; }
+
     }
 }

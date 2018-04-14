@@ -6,8 +6,9 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Azure.WebJobs.Host;
 using Microsoft.WindowsAzure.Storage.Table;
 using System.Threading.Tasks;
+using System.Collections.Generic;
 
-namespace bdjyghasofyug9asf
+namespace FaceSender
 {
     public static class HttpRetrieveOrder
     {
@@ -18,20 +19,27 @@ namespace bdjyghasofyug9asf
             string fileName = req.Query["fileName"];
             if (string.IsNullOrWhiteSpace(fileName))
                 return new BadRequestResult();
-            TableQuery<Order> query = new TableQuery<Order>().Where(TableQuery.GenerateFilterCondition("RowKey", QueryComparisons.Equal, fileName));
-            TableQuerySegment<Order> tableQueryResult = await ordersTable.ExecuteQuerySegmentedAsync(query, null);
+            TableQuery<PhotoOrder> query = new TableQuery<PhotoOrder>().Where(TableQuery.GenerateFilterCondition("RowKey", QueryComparisons.Equal, fileName));
+            TableQuerySegment<PhotoOrder> tableQueryResult = await ordersTable.ExecuteQuerySegmentedAsync(query, null);
             var resultList = tableQueryResult.Results;
 
             if (resultList.Any())
             {
                 var firstElement = resultList.First();
-                return new JsonResult(new
+                string[] resulotions = firstElement.Resolutions.Split(',');
+                List<PictureResizeRequest> requests = new List<PictureResizeRequest>();
+
+                foreach (var resolution in resulotions)
                 {
-                    firstElement.CustomerEmail,
-                    firstElement.PhotoName,
-                    firstElement.PhotoHeight,
-                    firstElement.PhotoWidth
-                });
+                    string[] resParams = resolution.Split('x');
+                    requests.Add(new PictureResizeRequest()
+                    {
+                        FileName = firstElement.FileName,
+                        RequiredWidth = System.Int32.Parse(resParams[0]),
+                        RequiredHeight = System.Int32.Parse(resParams[1])
+                    });
+                }
+                return new JsonResult(new { requests, firstElement.CustomerEmail });
             }
 
             return new NotFoundResult();
