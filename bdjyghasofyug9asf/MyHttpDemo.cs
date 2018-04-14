@@ -11,20 +11,28 @@ namespace bdjyghasofyug9asf
 {
     public static class MyHttpDemo
     {
-        [FunctionName("MyHttpDemo")]
-        public static IActionResult Run([HttpTrigger(AuthorizationLevel.Anonymous, "get", "post", Route = "saveMessage")]HttpRequest req, TraceWriter log)
+        [FunctionName("HttpOrderFormSave")]
+        public static IActionResult Run([HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = null)]HttpRequest req, TraceWriter log)
         {
-            log.Info("C# HTTP trigger function processed a request.");
-
-            string name = req.Query["name"];
-
-            string requestBody = new StreamReader(req.Body).ReadToEnd();
-            dynamic data = JsonConvert.DeserializeObject(requestBody);
-            name = name ?? data?.name;
-
-            return name != null
-                ? (ActionResult)new OkObjectResult($"Hello, {name}")
-                : new BadRequestObjectResult("Please pass a name on the query string or in the request body");
+            Order order = null;
+            try
+            {
+                string requestBody = new StreamReader(req.Body).ReadToEnd();
+                order = JsonConvert.DeserializeObject<Order>(requestBody);
+            }
+            catch(System.Exception)
+            {
+                return new BadRequestObjectResult("Wprowadzone dane s¹ nieprawid³owe.");
+            }
+            return (ActionResult)new OkObjectResult($"Zamówienie przyjêto.");
         }
+    }
+
+    public class Order
+    {
+        string Name { get; set; }
+        string EmailAddress { get; set; }
+        string PhotoSize { get; set; }
+        string PhotoName { get; set; }
     }
 }
